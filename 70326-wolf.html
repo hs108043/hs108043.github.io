@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>狼人殺判定系統</title>
+    <style>
+        body { 
+            background-color: #fdf5e6; /* 溫暖的背景色 */
+            display: flex;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+        }
+        /* 兩側花邊裝飾與容器 */
+        .container { 
+            font-family: sans-serif; 
+            max-width: 600px; 
+            background: white;
+            padding: 40px; 
+            line-height: 1.6;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            position: relative;
+            /* 使用線性漸層模擬兩側的花邊效果 */
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-image: url('https://www.transparenttextures.com/patterns/floral-paper.png') 30 repeat;
+        }
+        .wolf-img { 
+            width: 200px; 
+            display: block;
+            margin: 0 auto 20px;
+            border-radius: 50%; /* 圓形頭像感 */
+        }
+        h2 { text-align: center; color: #5d4037; }
+        textarea { width: 100%; height: 150px; margin-bottom: 10px; border: 2px solid #ddd; border-radius: 8px; padding: 10px; box-sizing: border-box; }
+        button { padding: 12px; cursor: pointer; background-color: #ff8a65; color: white; border: none; border-radius: 25px; width: 100%; font-size: 1.1em; font-weight: bold; }
+        button:hover { background-color: #ff7043; }
+        #output { margin-top: 20px; padding: 15px; border: 2px dashed #ffab91; font-weight: bold; border-radius: 8px; text-align: center; font-size: 1.2em; background: #fff9f8; }
+        .example-box { background: #fff3e0; padding: 15px; margin-top: 20px; font-size: 0.9em; border-radius: 8px; color: #6d4c41; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 可愛狼人圖片 -->
+        <img src="https://cdn.pixabay.com/photo/2017/01/31/15/33/animal-2025114_1280.png" alt="可愛狼人" class="wolf-img">
+
+        <h2>🐾 狼人殺勝負判定 🐾</h2>
+        <p>請輸入遊戲數據（依據來源規則）：</p>
+        
+        <textarea id="inputArea" placeholder="範例輸入：
+6
+0 1 0 1 -1 -1
+1
+5
+3
+0"></textarea>
+        
+        <button onclick="judgeGame()">檢視判定結果</button>
+
+        <div id="output">等待指令中...</div>
+
+        <div class="example-box">
+            <strong>📖 規則小筆記 (摘自來源)：</strong><br>
+            - <strong>身分：</strong>-1 狼人, 0 平民, 1 神職 [1]<br>
+            - <strong>勝負：</strong>遊戲結束時（輸入 0），若有狼人存活則輸出 <strong>Werewolves</strong>，否則為 <strong>Townsfolk</strong> [1]。<br>
+            - <strong>錯誤：</strong>若已淘汰玩家重複被點名，則輸出 <strong>Wrong</strong> [1, 2]。
+        </div>
+    </div>
+
+    <script>
+        function judgeGame() {
+            const input = document.getElementById('inputArea').value.trim();
+            const tokens = input.split(/\s+/).map(Number);
+            const outputDiv = document.getElementById('output');
+            
+            if (tokens.length < 2) {
+                outputDiv.innerText = "請輸入有效的遊戲資料！";
+                return;
+            }
+
+            let ptr = 0;
+            const N = tokens[ptr++]; // 玩家總數 [1]
+            const roles = [];
+            for (let i = 0; i < N; i++) {
+                roles.push(tokens[ptr++]); // 身分序列 [1]
+            }
+
+            let eliminated = new Array(N + 1).fill(false);
+            let isWrong = false;
+
+            while (ptr < tokens.length) {
+                let X = tokens[ptr++];
+                if (X === 0) break; // 輸入 0 結束遊戲 [1]
+                
+                if (eliminated[X]) {
+                    isWrong = true; // 已淘汰者再次被淘汰 [1]
+                    break;
+                }
+                eliminated[X] = true;
+            }
+
+            if (isWrong) {
+                outputDiv.innerText = "Wrong";
+                outputDiv.style.color = "#e64a19";
+            } else {
+                let werewolfSurvive = false;
+                for (let i = 1; i <= N; i++) {
+                    if (!eliminated[i] && roles[i-1] === -1) {
+                        werewolfSurvive = true; // 檢查是否有狼人存活 [1]
+                        break;
+                    }
+                }
+
+                if (werewolfSurvive) {
+                    outputDiv.innerText = "Werewolves";
+                    outputDiv.style.color = "#d32f2f";
+                } else {
+                    outputDiv.innerText = "Townsfolk";
+                    outputDiv.style.color = "#388e3c";
+                }
+            }
+        }
+    </script>
+</body>
+</html>
