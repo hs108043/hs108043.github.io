@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>動漫風 1A2B 猜數字</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:"Microsoft JhengHei",sans-serif;
+}
+
+body{
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:linear-gradient(
+        135deg,
+        #ff9ad5,
+        #ffc3e6,
+        #b8d9ff
+    );
+    overflow:hidden;
+}
+
+body::before,
+body::after{
+    content:"";
+    position:absolute;
+    width:500px;
+    height:500px;
+    border-radius:50%;
+    filter:blur(100px);
+    opacity:.4;
+}
+
+body::before{
+    background:#ff66b2;
+    top:-150px;
+    left:-150px;
+}
+
+body::after{
+    background:#66ccff;
+    bottom:-150px;
+    right:-150px;
+}
+
+.container{
+    position:relative;
+    z-index:10;
+    width:90%;
+    max-width:700px;
+    padding:30px;
+    border-radius:25px;
+    background:rgba(255,255,255,0.2);
+    backdrop-filter:blur(15px);
+    border:1px solid rgba(255,255,255,.3);
+    box-shadow:0 8px 30px rgba(0,0,0,.15);
+}
+
+.anime-icon{
+    text-align:center;
+    font-size:4rem;
+    margin-bottom:10px;
+}
+
+h1{
+    text-align:center;
+    color:white;
+    font-size:2.5rem;
+    text-shadow:0 0 15px rgba(255,255,255,.7);
+    margin-bottom:10px;
+}
+
+.subtitle{
+    text-align:center;
+    color:white;
+    margin-bottom:25px;
+}
+
+.input-area{
+    display:flex;
+    gap:10px;
+    margin-bottom:20px;
+}
+
+input{
+    flex:1;
+    padding:15px;
+    border:none;
+    border-radius:15px;
+    font-size:1.2rem;
+    text-align:center;
+    outline:none;
+}
+
+button{
+    border:none;
+    cursor:pointer;
+    border-radius:15px;
+    font-size:1rem;
+    font-weight:bold;
+    transition:.25s;
+}
+
+.guess-btn{
+    padding:15px 25px;
+    background:#ff5ea8;
+    color:white;
+}
+
+.guess-btn:hover{
+    background:#ff3e98;
+    transform:translateY(-2px);
+}
+
+.reset-btn{
+    width:100%;
+    margin-top:15px;
+    padding:12px;
+    background:#6ca8ff;
+    color:white;
+}
+
+.reset-btn:hover{
+    background:#4f94ff;
+}
+
+.message{
+    text-align:center;
+    color:white;
+    font-size:1.1rem;
+    margin-bottom:15px;
+    min-height:30px;
+}
+
+.history{
+    max-height:320px;
+    overflow:auto;
+}
+
+.record{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background:rgba(255,255,255,.25);
+    margin-bottom:10px;
+    padding:12px 15px;
+    border-radius:12px;
+    color:white;
+    animation:fadeIn .4s ease;
+}
+
+.count{
+    color:#ffe56d;
+    font-weight:bold;
+}
+
+@keyframes fadeIn{
+    from{
+        opacity:0;
+        transform:translateY(-10px);
+    }
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+}
+
+.win{
+    animation:winEffect .8s infinite alternate;
+}
+
+@keyframes winEffect{
+    from{
+        transform:scale(1);
+        text-shadow:0 0 10px gold;
+    }
+    to{
+        transform:scale(1.05);
+        text-shadow:0 0 30px gold;
+    }
+}
+
+#fireworks{
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    pointer-events:none;
+    z-index:9999;
+}
+
+::-webkit-scrollbar{
+    width:8px;
+}
+
+::-webkit-scrollbar-thumb{
+    background:rgba(255,255,255,.5);
+    border-radius:20px;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+    <div class="anime-icon">🌸</div>
+
+    <h1 id="title">動漫風 1A2B</h1>
+
+    <div class="subtitle">
+        猜出 4 位不重複數字吧！
+    </div>
+
+    <div class="input-area">
+        <input
+            id="guessInput"
+            type="text"
+            maxlength="4"
+            placeholder="輸入4位數字"
+        >
+
+        <button
+            class="guess-btn"
+            onclick="checkGuess()">
+            猜！
+        </button>
+    </div>
+
+    <div id="message" class="message"></div>
+
+    <div id="history" class="history"></div>
+
+    <button
+        class="reset-btn"
+        onclick="newGame()">
+        🔄 重新開始
+    </button>
+
+</div>
+
+<canvas id="fireworks"></canvas>
+
+<script>
+
+// ====================
+// 遊戲邏輯
+// ====================
+
+let answer = "";
+let attempts = 0;
+
+function generateAnswer(){
+
+    let nums =
+        ['0','1','2','3','4','5','6','7','8','9'];
+
+    for(let i=nums.length-1;i>0;i--){
+
+        let j =
+            Math.floor(Math.random()*(i+1));
+
+        [nums[i],nums[j]] =
+            [nums[j],nums[i]];
+    }
+
+    return nums.slice(0,4).join('');
+}
+
+function newGame(){
+
+    answer = generateAnswer();
+    attempts = 0;
+
+    document.getElementById("history").innerHTML = "";
+    document.getElementById("message").innerHTML =
+        "🌟 遊戲開始！";
+
+    document
+        .getElementById("title")
+        .classList.remove("win");
+
+    console.log("答案:",answer);
+}
+
+function showMessage(msg){
+    document.getElementById("message").innerHTML = msg;
+}
+
+function addHistory(guess,A,B){
+
+    const history =
+        document.getElementById("history");
+
+    const div =
+        document.createElement("div");
+
+    div.className = "record";
+
+    div.innerHTML = `
+        <span>${guess}</span>
+        <span class="count">${A}A ${B}B</span>
+    `;
+
+    history.prepend(div);
+}
+
+function checkGuess(){
+
+    const input =
+        document.getElementById("guessInput");
+
+    const guess =
+        input.value.trim();
+
+    if(!/^\d{4}$/.test(guess)){
+        showMessage("請輸入4位數字！");
+        return;
+    }
+
+    if(new Set(guess).size !== 4){
+        showMessage("數字不可重複！");
+        return;
+    }
+
+    attempts++;
+
+    let A = 0;
+    let B = 0;
+
+    for(let i=0;i<4;i++){
+
+        if(guess[i] === answer[i]){
+            A++;
+        }
+        else if(answer.includes(guess[i])){
+            B++;
+        }
+    }
+
+    addHistory(guess,A,B);
+
+    if(A === 4){
+
+        showMessage(
+            `🎉 恭喜答對！共用了 ${attempts} 次！`
+        );
+
+        document
+            .getElementById("title")
+            .classList.add("win");
+
+        launchCelebration();
+
+    }else{
+
+        showMessage(
+            `第 ${attempts} 次：${A}A${B}B`
+        );
+    }
+
+    input.value = "";
+    input.focus();
+}
+
+document
+.getElementById("guessInput")
+.addEventListener("keydown",e=>{
+
+    if(e.key==="Enter"){
+        checkGuess();
+    }
+});
+
+
+// ====================
+// 煙火系統
+// ====================
+
+const canvas =
+    document.getElementById("fireworks");
+
+const ctx =
+    canvas.getContext("2d");
+
+function resizeCanvas(){
+
+    canvas.width =
+        window.innerWidth;
+
+    canvas.height =
+        window.innerHeight;
+}
+
+resizeCanvas();
+
+window.addEventListener(
+    "resize",
+    resizeCanvas
+);
+
+let particles = [];
+
+class Particle{
+
+    constructor(x,y,color){
+
+        this.x = x;
+        this.y = y;
+
+        this.vx =
+            (Math.random()-0.5)*10;
+
+        this.vy =
+            (Math.random()-0.5)*10;
+
+        this.life = 100;
+
+        this.color = color;
+
+        this.size =
+            Math.random()*4+2;
+    }
+
+    update(){
+
+        this.x += this.vx;
+        this.y += this.vy;
+
+        this.vy += 0.05;
+
+        this.life--;
+    }
+
+    draw(){
+
+        ctx.globalAlpha =
+            this.life / 100;
+
+        ctx.beginPath();
+
+        ctx.arc(
+            this.x,
+            this.y,
+            this.size,
+            0,
+            Math.PI*2
+        );
+
+        ctx.fillStyle =
+            this.color;
+
+        ctx.fill();
+
+        ctx.globalAlpha = 1;
+    }
+}
+
+function createFirework(x,y){
+
+    const colors = [
+        "#ff4fa3",
+        "#ffd700",
+        "#00d4ff",
+        "#ffffff",
+        "#7cff6b",
+        "#ff884d"
+    ];
+
+    const color =
+        colors[
+            Math.floor(
+                Math.random()*colors.length
+            )
+        ];
+
+    for(let i=0;i<150;i++){
+
+        particles.push(
+            new Particle(
+                x,
+                y,
+                color
+            )
+        );
+    }
+}
+
+function animate(){
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    for(let i=particles.length-1;i>=0;i--){
+
+        particles[i].update();
+        particles[i].draw();
+
+        if(particles[i].life<=0){
+
+            particles.splice(i,1);
+        }
+    }
+
+    requestAnimationFrame(animate);
+}
+
+animate();
+
+function launchCelebration(){
+
+    for(let i=0;i<8;i++){
+
+        setTimeout(()=>{
+
+            createFirework(
+                Math.random()*canvas.width,
+                Math.random()*canvas.height*0.6+50
+            );
+
+        },i*300);
+
+    }
+}
+
+// ====================
+// 開始遊戲
+// ====================
+
+newGame();
+
+</script>
+
+</body>
+</html>
